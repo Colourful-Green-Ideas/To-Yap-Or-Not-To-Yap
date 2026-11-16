@@ -4,3 +4,9 @@ raw/
 __pycache__/
 .DS_Store
 *.parquet
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
