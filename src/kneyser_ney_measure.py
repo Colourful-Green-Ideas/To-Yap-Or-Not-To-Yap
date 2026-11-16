@@ -51,7 +51,6 @@ def main():
     else:
         scorer = NLTKLexicalSurprisalScorer("bigscience/bloom-7b1", order=3)
         scorer.load("nltk_3gram_en.pkl")
-        tokens, surprisals = scorer.score_text("Your continuation text here.")
 
         token_pairs = zip(tokens, surprisals)
 
