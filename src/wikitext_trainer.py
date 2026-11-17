@@ -2,9 +2,13 @@ from datasets import load_dataset
 from kneyser_ney_measure import NLTKLexicalSurprisalScorer
 
 
-def fetch_wikitext103_lines(max_lines: int = 75_000, exclude_texts: set[str] | None = None) -> list[str]:
+def fetch_wikitext103_lines(
+    max_lines: int = 75_000, exclude_texts: set[str] | None = None
+) -> list[str]:
     """Streams clean, non-header paragraphs from WikiText-103."""
-    ds = load_dataset("Salesforce/wikitext", "wikitext-103-raw-v1", split="train", streaming=True)
+    ds = load_dataset(
+        "Salesforce/wikitext", "wikitext-103-raw-v1", split="train", streaming=True
+    )
     exclude_texts = exclude_texts or set()
 
     clean_lines: list[str] = []
@@ -32,13 +36,17 @@ if __name__ == "__main__":
     print(f"Collected {len(train_texts)} clean passages.")
 
     print("Training 3-gram Kneser-Ney model...")
-    scorer = NLTKLexicalSurprisalScorer(tokenizer_name=TOKENIZER_NAME, order=3, discount=0.75)
+    scorer = NLTKLexicalSurprisalScorer(
+        tokenizer_name=TOKENIZER_NAME, order=3, discount=0.75
+    )
     scorer.train(train_texts)
 
     scorer.save(OUTPUT_PATH)
     print(f"Saved trained model to {OUTPUT_PATH}")
 
     # Quick sanity check
-    tokens, surprisals = scorer.score_text("The scientific method relies on empirical observation and hypothesis testing.")
+    tokens, surprisals = scorer.score_text(
+        "The scientific method relies on empirical observation and hypothesis testing."
+    )
     print("Sample tokens:", tokens[:8])
     print("Sample surprisals (bits):", [round(s, 2) for s in surprisals[:8]])
