@@ -1,0 +1,1 @@
+Change neural measure so it also computes probs on human continuation of the prompt instead of the prompt instead

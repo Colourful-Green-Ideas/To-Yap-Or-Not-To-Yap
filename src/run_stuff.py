@@ -1,74 +1,72 @@
-from kneyser_ney_measure import NLTKLexicalSurprisalScorer
-from neural_measure import NeuralSurprisalScorer
 import csv
 import json
+import os
+import time
+from kn_measure import KNSurprisalScorer
+from neural_measure import NeuralSurprisalScorer
+
+INPUT_TSV = "corpus_prompts.tsv"
+OUTPUT_JSONL = "output.jsonl"
+TOKENIZER_NAME = "bigscience/bloom-3b"
 
 
 def main():
-    output = []
-    print("Intializing Neural Surprisal Scorer...")
-    neural_model_scorer = NeuralSurprisalScorer("unsloth/Llama-3.2-1B")
+    # External bilingual judges (shared across English & Hindi)
+    bloom_scorer = NeuralSurprisalScorer("bigscience/bloom-3b", device="mps")
+    mgpt_scorer = NeuralSurprisalScorer("ai-forever/mGPT", device="mps")
 
-    print("Intializing NLTK Lexical Surprisal Scorer...")
-    nltk_model_scorer = NLTKLexicalSurprisalScorer("bigscience/bloom-7b1", order=3)
-    nltk_model_scorer.load("nltk_3gram_en.pkl")
+    print("Loading Kneser-Ney models...")
+    kn_scorers = {
+        "en": KNSurprisalScorer("en_kn3.pkl", tokenizer_name=TOKENIZER_NAME),
+        "hi": KNSurprisalScorer("hi_kn3.pkl", tokenizer_name=TOKENIZER_NAME),
+    }
 
-    nltk_model_scorer_hi = NLTKLexicalSurprisalScorer("bigscience/bloom-7b1", order=3)
-    nltk_model_scorer_hi.load("nltk_3gram_hi.pkl")
+    # Resume by (doc_id, author) pair so multiple authors per doc_id don't collide
+    done: set[tuple[str, str]] = set()
+    if os.path.exists(OUTPUT_JSONL):
+        with open(OUTPUT_JSONL, encoding="utf-8") as f:
+            for line in f:
+                if line.strip():
+                    rec = json.loads(line)
+                    done.add((rec["doc_id"], rec["author"]))
+        print(f"Already scored: {len(done)} entries, skipping them")
 
-    with open("corpus_prompts.tsv", "r") as prompts_tsv:
-        print("Reading the TSV...")
-        csv_reader = csv.reader(prompts_tsv, delimiter="\t")
+    with open(INPUT_TSV, encoding="utf-8", newline="") as f:
+        rows = list(csv.reader(f, delimiter="\t"))[1:]
 
-        next(csv_reader)
-        for line in csv_reader:
-            doc_id, lang, genre, author, prompt, human_cont = line
+    todo = [r for r in rows if (r[0], r[3]) not in done]
+    print(f"To score: {len(todo)} entries")
 
-            print("Scoring using Neural Scorer...")
-            n_tokens, n_surprisal = neural_model_scorer.score_text(prompt)
+    start = time.time()
+    with open(OUTPUT_JSONL, "a", encoding="utf-8") as out:
+        for i, (doc_id, lang, genre, author, prompt, cont) in enumerate(todo, start=1):
+            b_tokens, b_bits = bloom_scorer.score_continuation(prompt, cont)
+            m_tokens, m_bits = mgpt_scorer.score_continuation(prompt, cont)
+            k_tokens, k_bits = kn_scorers[lang].score_continuation(prompt, cont)
 
-            print("Scoring using NLTK Scorer...")
-
-            kn_tokens = []
-            kn_surprisal = []
-            if lang == "hi":
-                kn_tokens, kn_surprisal = nltk_model_scorer_hi.score_text(prompt)
-            else:
-                kn_tokens, kn_surprisal = nltk_model_scorer.score_text(prompt)
-
-            n_pairs = zip(n_tokens, n_surprisal)
-            kn_pairs = zip(kn_tokens, kn_surprisal)
-
-            n_pairs_json = []
-            kn_pairs_json = []
-
-            for token, surprisal in n_pairs:
-                print(token, "\t", surprisal)
-                n_pairs_json.append((token, surprisal))
-
-            print("=" * 50)
-
-            for token, surprisal in kn_pairs:
-                print(token, "\t", surprisal)
-                kn_pairs_json.append((token, surprisal))
-
-            print("\n" * 3)
-
-            entry_dict = {
+            entry = {
                 "doc_id": doc_id,
                 "lang": lang,
                 "genre": genre,
                 "author": author,
-                "prompt": prompt,
-                "human_cont": human_cont,
-                "nltk_pairs": kn_pairs_json,
-                "neural_pairs": n_pairs_json,
+                "bloom_pairs": [[t, round(b, 4)] for t, b in zip(b_tokens, b_bits)],
+                "mgpt_pairs": [[t, round(b, 4)] for t, b in zip(m_tokens, m_bits)],
+                "kn_pairs": [[t, round(b, 4)] for t, b in zip(k_tokens, k_bits)],
             }
 
-            output.append(entry_dict)
+            out.write(json.dumps(entry, ensure_ascii=False) + "\n")
+            out.flush()
 
-    with open("output.json", "w") as json_output:
-        json.dump(entry_dict, json_output, indent=4, ensure_ascii=False)
+            if i == 1 or i % 25 == 0 or i == len(todo):
+                per_doc = (time.time() - start) / i
+                mins_left = per_doc * (len(todo) - i) / 60
+                total_done = len(done) + i
+                print(
+                    f"{total_done}/{len(rows)} done ({doc_id} | {author})  |  "
+                    f"{per_doc:.2f} s/entry  |  ~{mins_left:.1f} min left"
+                )
+
+    print("Finished. Results in", OUTPUT_JSONL)
 
 
 if __name__ == "__main__":

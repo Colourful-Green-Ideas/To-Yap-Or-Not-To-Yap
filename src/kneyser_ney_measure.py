@@ -38,6 +38,7 @@ class NLTKLexicalSurprisalScorer:
 
         return tokens, surprisals
 
+
 def main():
     if len(sys.argv) > 1:
         background_texts = ""
@@ -55,7 +56,8 @@ def main():
         token_pairs = zip(tokens, surprisals)
 
         for token, surprisal in token_pairs:
-            print(token, '\t', surprisal)
+            print(token, "\t", surprisal)
+
 
 if __name__ == "__main__":
     main()
