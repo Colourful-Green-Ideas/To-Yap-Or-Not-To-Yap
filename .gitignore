@@ -11,3 +11,9 @@ dist/
 wheels/
 *.egg-info
 *.pkl
+
+# generated data (regenerate with the scripts in src/)
+*.jsonl
+bg_*.txt
+*.binary
+kenlm/
