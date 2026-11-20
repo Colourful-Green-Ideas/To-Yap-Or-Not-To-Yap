@@ -1,11 +1,11 @@
-# Builds en_kn3.pkl and hi_kn3.pkl for kn_measure.py
-# Run: uv run kn_trainer.py
+# Builds en_kn3.pkl and hi_kn3.pkl for kn.py
+# Run: uv run train_kn.py
 
 import os
 import unicodedata
 from datasets import load_dataset
 from transformers import AutoTokenizer
-from kn_measure import KneserNeyTrigram, KNSurprisalScorer
+from kn import KneserNeyTrigram, KNSurprisalScorer
 
 # Note: bigscience/bloom-3b and bigscience/bloom-7b1 share the exact same tokenizer
 TOKENIZER_NAME = "bigscience/bloom-3b"

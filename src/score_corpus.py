@@ -2,8 +2,8 @@ import csv
 import json
 import os
 import time
-from kn_measure import KNSurprisalScorer
-from neural_measure import NeuralSurprisalScorer
+from kn import KNSurprisalScorer
+from neural import NeuralSurprisalScorer
 
 INPUT_TSV = "corpus_prompts.tsv"
 OUTPUT_JSONL = "output.jsonl"
@@ -57,14 +57,14 @@ def main():
             out.write(json.dumps(entry, ensure_ascii=False) + "\n")
             out.flush()
 
-            if i == 1 or i % 25 == 0 or i == len(todo):
-                per_doc = (time.time() - start) / i
-                mins_left = per_doc * (len(todo) - i) / 60
-                total_done = len(done) + i
-                print(
-                    f"{total_done}/{len(rows)} done ({doc_id} | {author})  |  "
-                    f"{per_doc:.2f} s/entry  |  ~{mins_left:.1f} min left"
-                )
+            #if i == 1 or i % 25 == 0 or i == len(todo):
+            per_doc = (time.time() - start) / i
+            mins_left = per_doc * (len(todo) - i) / 60
+            total_done = len(done) + i
+            print(
+                f"{total_done}/{len(rows)} done ({doc_id} | {author})  |  "
+                f"{per_doc:.2f} s/entry  |  ~{mins_left:.1f} min left"
+            )
 
     print("Finished. Results in", OUTPUT_JSONL)
 
