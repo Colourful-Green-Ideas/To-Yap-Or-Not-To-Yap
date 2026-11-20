@@ -41,18 +41,19 @@ class NeuralSurprisalScorer:
 
     @torch.no_grad()
     def score_continuation(
-        self, prompt: str, cont: str, max_length: int = 1024
+        self, prompt: str, cont: str, max_length: int = 2048, max_prompt: int = 512
     ) -> tuple[list[str], list[float]]:
-        """Scores continuation tokens conditioned on the full prompt prefix."""
-        prompt_ids = self.tokenizer(
-            prompt, add_special_tokens=True, truncation=True, max_length=max_length // 2
-        )["input_ids"]
-        cont_ids = self.tokenizer(
-            " " + cont.lstrip(),
-            add_special_tokens=False,
-            truncation=True,
-            max_length=max_length // 2,
-        )["input_ids"]
+        """Scores continuation tokens conditioned on the prompt prefix.
+
+        BLOOM and mGPT both have a 2048-token context, so the continuation is kept
+        whole and the neural scores cover the same text as the Kneser-Ney scores.
+        If the prompt is too long, its start is dropped, keeping the words right
+        before the continuation.
+        """
+        prompt_ids = self.tokenizer(prompt, add_special_tokens=True)["input_ids"]
+        prompt_ids = prompt_ids[-max_prompt:]
+        cont_ids = self.tokenizer(" " + cont.lstrip(), add_special_tokens=False)["input_ids"]
+        cont_ids = cont_ids[: max_length - len(prompt_ids)]
 
         if not cont_ids:
             return [], []
