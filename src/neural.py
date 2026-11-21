@@ -52,7 +52,9 @@ class NeuralSurprisalScorer:
         """
         prompt_ids = self.tokenizer(prompt, add_special_tokens=True)["input_ids"]
         prompt_ids = prompt_ids[-max_prompt:]
-        cont_ids = self.tokenizer(" " + cont.lstrip(), add_special_tokens=False)["input_ids"]
+        cont_ids = self.tokenizer(" " + cont.lstrip(), add_special_tokens=False)[
+            "input_ids"
+        ]
         cont_ids = cont_ids[: max_length - len(prompt_ids)]
 
         if not cont_ids:
@@ -61,7 +63,6 @@ class NeuralSurprisalScorer:
         full_ids = torch.tensor([prompt_ids + cont_ids], device=self.device)
         logits = self.model(full_ids).logits[0]
 
-        # Shift by 1: logit at index t-1 predicts token at index t
         start_idx = len(prompt_ids) - 1
         end_idx = len(prompt_ids) + len(cont_ids) - 1
 

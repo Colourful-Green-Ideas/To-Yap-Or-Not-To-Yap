@@ -1,13 +1,9 @@
-# Builds en_kn3.pkl and hi_kn3.pkl for kn.py
-# Run: uv run train_kn.py
-
 import os
 import unicodedata
 from datasets import load_dataset
 from transformers import AutoTokenizer
 from kn import KneserNeyTrigram, KNSurprisalScorer
 
-# Note: bigscience/bloom-3b and bigscience/bloom-7b1 share the exact same tokenizer
 TOKENIZER_NAME = "bigscience/bloom-3b"
 MAX_LINES = 75_000
 
@@ -40,7 +36,9 @@ def collect(lang: str, lines) -> list[str]:
     if os.path.exists(text_file):
         with open(text_file, encoding="utf-8") as f:
             texts = [
-                unicodedata.normalize("NFC", l) for l in f.read().split("\n") if l.strip()
+                unicodedata.normalize("NFC", l)
+                for l in f.read().split("\n")
+                if l.strip()
             ]
         print(
             f"[{lang}] text already downloaded, loaded {len(texts):,} lines from {text_file}"
@@ -80,7 +78,9 @@ def build(lang: str, lines, out_path: str, tokenizer) -> None:
     print(f"[{lang}] step 2/3: tokenizing...")
     sequences = []
     for i in range(0, len(texts), 1000):
-        sequences += tokenizer(texts[i : i + 1000], add_special_tokens=False)["input_ids"]
+        sequences += tokenizer(texts[i : i + 1000], add_special_tokens=False)[
+            "input_ids"
+        ]
         if (i + 1000) % 10_000 == 0:
             print(f"    [{lang}] {i + 1000:,} / {len(texts):,} lines tokenized")
     print(f"[{lang}] {sum(len(s) for s in sequences):,} tokens")
@@ -107,3 +107,4 @@ if __name__ == "__main__":
     ]:
         tokens, bits = scorer.score_continuation("London", cont)
         print(f"{sum(bits) / len(bits):5.2f} bits/token  <-  London {cont}")
+

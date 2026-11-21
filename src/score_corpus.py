@@ -1,13 +1,3 @@
-# Scores the human continuations in corpus_prompts.tsv with three judges:
-#   BLOOM-3b and mGPT (neural, external judges) and our Kneser-Ney trigram (lexical).
-# Writes one JSON object per line to scores_human.jsonl and can be stopped and resumed.
-#
-# Documents are scored round-robin across the five subsets, so stopping early
-# still gives a balanced sample.
-#
-# Run from src/:  uv run score_corpus.py
-#                 uv run score_corpus.py --per-subset 100
-
 import argparse
 import csv
 import json
@@ -38,8 +28,12 @@ def round_robin(rows):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--per-subset", type=int, default=None,
-                        help="only score the first N documents of each subset")
+    parser.add_argument(
+        "--per-subset",
+        type=int,
+        default=None,
+        help="only score the first N documents of each subset",
+    )
     parser.add_argument("--device", default="mps")
     args = parser.parse_args()
 
@@ -96,8 +90,10 @@ def main():
 
             per_doc = (time.time() - start) / i
             mins_left = per_doc * (len(todo) - i) / 60
-            print(f"{len(done) + i}/{len(done) + len(todo)} ({doc_id})  |  "
-                  f"{per_doc:.2f} s/doc  |  ~{mins_left:.0f} min left")
+            print(
+                f"{len(done) + i}/{len(done) + len(todo)} ({doc_id})  |  "
+                f"{per_doc:.2f} s/doc  |  ~{mins_left:.0f} min left"
+            )
 
     print("Finished. Results in", OUTPUT_JSONL)
 
